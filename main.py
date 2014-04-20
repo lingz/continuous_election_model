@@ -1,6 +1,6 @@
 from voter import Voter, Candidate
-import yaml
-import threading
+from multiprocessing import Process, Queue
+import json
 import sys
 import os
 import cProfile
@@ -73,6 +73,9 @@ def main():
   else:
     run_experiment(numVoters, numCandidates, numRounds)
 
+def start_process(numVoters, numCandidates, numRounds, i, repeats, result_queue):
+  context = Run_Context(numVoters, numCandidates, numRounds, i, repeats, result_queue)
+  context.run()
 
 def run_experiment(numVoters, numCandidates, numRounds):
   global numThreads, repeats
@@ -80,7 +83,11 @@ def run_experiment(numVoters, numCandidates, numRounds):
   data = []
   # if numRounds is not a multiple of threads, make it so
   if repeats % numThreads:
-    repeats = ((numRounds / numThreads) + 1) * numThreads
+    repeats = ((repeats / numThreads) + 1) * numThreads
+
+  # build a queue to collect results
+  result_queue = Queue(repeats)
+
   summary = {"parameters": 
       {
         "Voters": numVoters,
@@ -93,11 +100,13 @@ def run_experiment(numVoters, numCandidates, numRounds):
 
   threads = []
   for i in xrange(numThreads):
-    threads.append(Run_Context(numVoters, numCandidates, numRounds, i, repeats / numThreads, data))
+    threads.append(Process(target=start_process, args=(numVoters, numCandidates, numRounds, i, repeats / numThreads, result_queue)))
   for thread in threads:
     thread.start()
   for thread in threads:
     thread.join()
+  for i in xrange(repeats):
+    data.append(result_queue.get(False))
 
   equilibrium_average = average(data, "average_to_equilibrium")
   equilibrium_variance = variance(data, equilibrium_average, "average_to_equilibrium")
@@ -122,25 +131,24 @@ def run_experiment(numVoters, numCandidates, numRounds):
       }
   dump_path = os.path.join(path, "results_n%d_c%d_r%d.txt" % (numVoters, numCandidates, numRounds))
   with open(dump_path, "w") as f:
-    yaml.dump(summary, f)
+    json.dump(summary, f)
   print("Khalas")
 
-class Run_Context(threading.Thread):
-  def __init__(self, numVoters, numCandidates, numRounds, threadNum, repeats, data):
+class Run_Context():
+  def __init__(self, numVoters, numCandidates, numRounds, threadNum, repeats, result_queue):
     print("Thread %d Initiliazed" % threadNum)
-    threading.Thread.__init__(self)
     self.numVoters = numVoters
     self.numCandidates = numCandidates
     self.numRounds = numRounds
     self.threadNum = threadNum
     self.repeats = repeats
-    self.data = data
+    self.result_queue = result_queue
 
   def run(self):
     print("Thread %d Started" % self.threadNum)
     for i in xrange(self.repeats):
       self.experimentNum = i
-      print("Thread %d, Experiment %d" % (self.threadNum, self.experimentNum))
+      print("Thread %d - Experiment %d" % (self.threadNum, self.experimentNum))
       self.voters = [Candidate(i) if i < self.numCandidates else Voter() for i in xrange(self.numVoters)]
       if verbose:
         print("Candidate Data:")
@@ -150,7 +158,9 @@ class Run_Context(threading.Thread):
       single_summary = {}
       if detailed:
         single_summary["round_data"] = single_repeat_data
-      for round in xrange(self.numRounds):
+      for roundNum in xrange(self.numRounds):
+        self.roundNum = roundNum
+        print("Thread %d - Experiment %d - Round %d" % (self.threadNum, self.experimentNum, self.roundNum))
         single_repeat_data.append(self.vote_round())
 
       average_to_equilibrium = 0
@@ -168,7 +178,7 @@ class Run_Context(threading.Thread):
       staying_power.sort()
       single_summary["staying_power"] = map(lambda x: 1.0 * x / self.numRounds, staying_power[::-1])
       single_summary["turnover_average"] = 1.0 * turnover_average / self.numRounds
-      self.data.append(single_summary)
+      self.result_queue.put(single_summary)
 
   def vote_sub_round(self):
     scores = [0 for x in xrange(self.numCandidates)]
@@ -221,7 +231,7 @@ class Run_Context(threading.Thread):
   def vote_round(self):
     global cycle_count
     cycle_count += 1
-    print("Thread %d - Experiment %d - Cycle %d" % (self.threadNum, self.experimentNum, cycle_count))
+    print("Thread %d - Experiment %d - Round %d - Cycle %d" % (self.threadNum, self.experimentNum, self.roundNum, cycle_count))
 
     complete = False
     previous_scores = [0] * self.numCandidates
@@ -237,7 +247,7 @@ class Run_Context(threading.Thread):
     while (not complete):
       sub_cycles_count += 1
 
-      print "Thread %d - Experiment %d, Cycle %d - Sub-Cycle %d:" % (self.threadNum, self.experimentNum, cycle_count, sub_cycles_count)
+      print "Thread %d - Experiment %d - Round %d - Cycle %d - Sub-Cycle %d:" % (self.threadNum, self.experimentNum, self.roundNum, cycle_count, sub_cycles_count)
 
       result = self.vote_sub_round()
 
