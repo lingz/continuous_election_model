@@ -4,6 +4,7 @@ import json
 import sys
 import os
 import cProfile
+import random
 
 verbose = False
 step = False
@@ -129,7 +130,7 @@ def run_experiment(numVoters, numCandidates, numRounds):
         "value": turnover_average,
         "variance": turnover_variance
       }
-  dump_path = os.path.join(path, "results_n%d_c%d_r%d.txt" % (numVoters, numCandidates, numRounds))
+  dump_path = os.path.join(path, "results_n%d_c%d_r%d_%.6f.txt" % (numVoters, numCandidates, numRounds, random.random()))
   with open(dump_path, "w") as f:
     json.dump(summary, f)
   print("Khalas")
