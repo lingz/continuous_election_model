@@ -1,6 +1,0 @@
-average_to_equilibrium: {value: 1.4600000000000002, variance: 0.2464}
-parameters: {Candidates: 5, Repeats: 10, Rounds: 10, Voters: 100}
-staying_power:
-  value: [0.9199999999999999, 0.07999999999999999, 0.0, 0.0, 0.0]
-  variance: [0.007599999999999998, 0.007600000000000001, 0.0, 0.0, 0.0]
-turnover_average: {value: 0.18000000000000002, variance: 0.0076}
