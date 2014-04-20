@@ -231,7 +231,8 @@ class Run_Context():
   def vote_round(self):
     global cycle_count
     cycle_count += 1
-    print("Thread %d - Experiment %d - Round %d - Cycle %d" % (self.threadNum, self.experimentNum, self.roundNum, cycle_count))
+    if verbose:
+      print("Thread %d - Experiment %d - Round %d - Cycle %d" % (self.threadNum, self.experimentNum, self.roundNum, cycle_count))
 
     complete = False
     previous_scores = [0] * self.numCandidates
@@ -246,8 +247,8 @@ class Run_Context():
     sub_cycles_to_equilbrium = 0
     while (not complete):
       sub_cycles_count += 1
-
-      print "Thread %d - Experiment %d - Round %d - Cycle %d - Sub-Cycle %d:" % (self.threadNum, self.experimentNum, self.roundNum, cycle_count, sub_cycles_count)
+      if verbose:
+        print "Thread %d - Experiment %d - Round %d - Cycle %d - Sub-Cycle %d:" % (self.threadNum, self.experimentNum, self.roundNum, cycle_count, sub_cycles_count)
 
       result = self.vote_sub_round()
 
