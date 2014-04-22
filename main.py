@@ -1,6 +1,6 @@
 from voter import Voter, Candidate
 from multiprocessing import Process, Queue
-import json
+import yaml
 import sys
 import os
 import cProfile
@@ -132,7 +132,7 @@ def run_experiment(numVoters, numCandidates, numRounds):
       }
   dump_path = os.path.join(path, "results_n%d_c%d_r%d_%.6f.txt" % (numVoters, numCandidates, numRounds, random.random()))
   with open(dump_path, "w") as f:
-    json.dump(summary, f)
+    yaml.dump(summary, f)
   print("Khalas")
 
 class Run_Context():
